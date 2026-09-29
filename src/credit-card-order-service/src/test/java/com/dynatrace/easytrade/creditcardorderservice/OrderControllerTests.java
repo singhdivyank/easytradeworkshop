@@ -2,6 +2,7 @@ package com.dynatrace.easytrade.creditcardorderservice;
 
 import com.dynatrace.easytrade.creditcardorderservice.models.*;
 
+import dev.openfeature.sdk.Client;
 import dev.openfeature.sdk.OpenFeatureAPI;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.*;
@@ -112,6 +114,51 @@ public class OrderControllerTests {
                 String.format(OrderController.WRONG_SEQUENCE, StatusType.SEQUENCE_ERROR.getDescription(),
                         status.status(), STATUS_REQUEST.type()),
                 STATUS_REQUEST, GUID);
+    }
+
+    @Test
+    @SneakyThrows
+    void getLatestStatusWithMeltdownFlagOnDoesNotThrowTest() {
+        // Regression test for issue #19: GET /v1/orders/{accountId}/status/latest
+        // returned HTTP 500 on 100% of requests due to a divide-by-zero in the
+        // arithmetic sequence calculation when the credit_card_meltdown flag is on.
+        int accountId = 13;
+        CreditCardOrderStatus status = new CreditCardOrderStatus(1, GUID, OffsetDateTime.now(),
+                StatusType.ORDER_CREATED.getType(), "");
+
+        Client client = Mockito.mock(Client.class);
+        Mockito.when(openFeatureAPI.getClient()).thenReturn(client);
+        Mockito.when(client.getBooleanValue("credit_card_meltdown", false)).thenReturn(true);
+
+        Mockito.when(helper.getConnection()).thenReturn(null);
+        Mockito.when(helper.getLastOrderStatusForAccountId(null, accountId)).thenReturn(Optional.of(status));
+
+        OrderController controller = new OrderController(helper, openFeatureAPI);
+        ResponseEntity<StandardResponse> response = controller.getLatestStatus(accountId);
+        var body = response.getBody();
+        assertNotNull(body, "Expected response body to not be null");
+        assertEquals(HttpStatus.OK.value(), body.statusCode());
+    }
+
+    @Test
+    @SneakyThrows
+    void getLatestStatusWithMeltdownFlagOffReturnsStatusTest() {
+        int accountId = 13;
+        CreditCardOrderStatus status = new CreditCardOrderStatus(1, GUID, OffsetDateTime.now(),
+                StatusType.ORDER_CREATED.getType(), "");
+
+        Client client = Mockito.mock(Client.class);
+        Mockito.when(openFeatureAPI.getClient()).thenReturn(client);
+        Mockito.when(client.getBooleanValue("credit_card_meltdown", false)).thenReturn(false);
+
+        Mockito.when(helper.getConnection()).thenReturn(null);
+        Mockito.when(helper.getLastOrderStatusForAccountId(null, accountId)).thenReturn(Optional.of(status));
+
+        OrderController controller = new OrderController(helper, openFeatureAPI);
+        ResponseEntity<StandardResponse> response = controller.getLatestStatus(accountId);
+        var body = response.getBody();
+        assertNotNull(body, "Expected response body to not be null");
+        assertEquals(HttpStatus.OK.value(), body.statusCode());
     }
 
     private void checkOrderCreationResult(int statusCode, String message, CreditCardOrderRequest request) {

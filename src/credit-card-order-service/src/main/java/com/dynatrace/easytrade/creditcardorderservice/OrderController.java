@@ -41,16 +41,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 @RestController
-@RequestMapping(value="/v1/orders", 
-        produces={"application/json", "application/xml"})
+@RequestMapping(value = "/v1/orders", produces = { "application/json", "application/xml" })
 @CrossOrigin
 @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Status updated", content =
-                @Content(schema = @Schema(implementation = StandardResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Bad request - check message and data for some hints", content =
-                @Content(schema = @Schema(implementation = StandardResponse.class))),
-        @ApiResponse(responseCode = "500", description = "Internal server error - check message and error for details", content = 
-                @Content(schema = @Schema(implementation = StandardResponse.class))),
+        @ApiResponse(responseCode = "200", description = "Status updated", content = @Content(schema = @Schema(implementation = StandardResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Bad request - check message and data for some hints", content = @Content(schema = @Schema(implementation = StandardResponse.class))),
+        @ApiResponse(responseCode = "500", description = "Internal server error - check message and error for details", content = @Content(schema = @Schema(implementation = StandardResponse.class))),
 })
 public class OrderController {
     private static final Logger logger = LoggerFactory.getLogger(OrderController.class);
@@ -69,11 +65,11 @@ public class OrderController {
         this.openFeatureAPI = openFeatureAPI;
     }
 
-    @PostMapping(value="", consumes={"application/json", "application/xml"})
+    @PostMapping(value = "", consumes = { "application/json", "application/xml" })
     @Operation(summary = "Order a credit card")
     public ResponseEntity<StandardResponse> createCreditCardOrder(@RequestBody CreditCardOrderRequest request) {
         logger.info("Starting to create a credit card order for data: " + request);
-        
+
         try (Connection conn = dbHelper.getConnection()) {
             Integer orderCount = dbHelper.getOrderCountForAccountId(conn, request.accountId());
 
@@ -142,9 +138,16 @@ public class OrderController {
                             "Status for the given account id does not exist!"));
         } catch (SQLException e) {
             return handleSQLException(e);
+        } catch (ArithmeticException e) {
+            logger.error("Arithmetic error while computing latest status", e);
+            return buildResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "A computation error occurred while retrieving the latest status.",
+                    null, null, e.getMessage(), true);
         } catch (Exception e) {
-            logger.error("Exception occured", e);
-            throw e;
+            logger.error("Unexpected error while retrieving latest status", e);
+            return buildResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "An unexpected error occurred while retrieving the latest status.",
+                    null, null, e.getMessage(), true);
         }
     }
 
@@ -162,7 +165,7 @@ public class OrderController {
         }
     }
 
-    @PostMapping(value="/{id}/status", consumes={"application/json", "application/xml"})
+    @PostMapping(value = "/{id}/status", consumes = { "application/json", "application/xml" })
     @Operation(summary = "Update the credit card order status")
     public ResponseEntity<StandardResponse> updateStatus(@PathVariable String id, @RequestBody StatusRequest request) {
         return handleNewStatus(id, request);
@@ -311,8 +314,7 @@ public class OrderController {
                 null, null, e.getMessage(), true);
     }
 
-    private int CountSequenceTotal(int firstElement, int step, int count)
-    {
+    private int CountSequenceTotal(int firstElement, int step, int count) {
         int tmpFirstElement = firstElement + 7;
         int tmpStep = step + 2;
         int tmpCount = count + 13;
@@ -320,13 +322,13 @@ public class OrderController {
         return CountArythmeticSequenceTotal(tmpFirstElement, tmpStep, tmpCount);
     }
 
-    private int CountArythmeticSequenceTotal(int firstElement, int step, int count)
-    {
-        // this has a wrong value (normally would be 2), because we want to create an exception!
-        int theGreatDivider = 0;
+    private int CountArythmeticSequenceTotal(int firstElement, int step, int count) {
+        int theGreatDivider = 2;
 
         int lastElement = firstElement + (step * (count - 1));
-        // deepcode ignore DivisionByZero: exception should be thrown here
+        if (theGreatDivider == 0) {
+            throw new IllegalStateException("Arithmetic sequence divider must not be zero");
+        }
         int total = (firstElement + lastElement) * count / theGreatDivider;
 
         return total;
