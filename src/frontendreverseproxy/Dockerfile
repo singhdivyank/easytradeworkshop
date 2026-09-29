@@ -15,6 +15,7 @@ ENV LOGIN_SERVICE_URL=http://loginservice:8080 \
     ENGINE_URL=http://engine:8080 \
     MANAGER_URL=http://manager:8080 \
     CREDIT_CARD_ORDER_SERVICE_URL=http://credit-card-order-service:8080 \
+    BITCOIN_PAYMENT_SERVICE_URL=http://bitcoin-payment-service:8080 \
     THIRD_PARTY_SERVICE_URL=http://third-party-service:8080 \
     FEATURE_FLAG_SERVICE_URL=http://feature-flag-service:8080 \
     FRONTEND_URL=http://frontend:3000/ \

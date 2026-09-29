@@ -125,6 +125,37 @@ credit-card-order-service:
     enabled: true
     port: 8080
 
+bitcoin-payment-service:
+  enabled: true
+  env:
+    PROXY_PREFIX: "bitcoin-payment-service"
+    FEATURE_FLAG_SERVICE_PROTOCOL: http
+    FEATURE_FLAG_SERVICE_BASE_URL: "{{ .Release.Name }}-feature-flag-service"
+    FEATURE_FLAG_SERVICE_PORT: "8080"
+    JAVA_TOOL_OPTIONS: "-XX:-OmitStackTraceInFastThrow"
+    # Bounded connection pool. Governs the per-replica connection budget against the shared
+    # MSSQL instance so scaling out replicas cannot exhaust database connections.
+    DB_POOL_MAX_SIZE: "10"
+    DB_POOL_MIN_IDLE: "2"
+    # Async settlement scheduler cadence (seconds).
+    SETTLEMENT_DELAY: "5"
+    SETTLEMENT_RATE: "10"
+    SETTLEMENT_BATCH_LIMIT: "500"
+  envFromSecret:
+    MSSQL_CONNECTIONSTRING:
+      name: "{{ .Release.Name }}-connection-strings"
+      key: "JAVA_CONNECTION_STRING"
+  resources:
+    requests:
+      cpu: 20m
+      memory: 650Mi
+    limits:
+      cpu: 500m
+      memory: 650Mi
+  service:
+    enabled: true
+    port: 8080
+
 db:
   enabled: true
   workloadType: statefulset
@@ -201,6 +232,7 @@ frontendreverseproxy:
     ACCOUNT_SERVICE_URL: "http://{{ .Release.Name }}-accountservice:8080"
     BROKER_SERVICE_URL: "http://{{ .Release.Name }}-broker-service:8080"
     CREDIT_CARD_ORDER_SERVICE_URL: "http://{{ .Release.Name }}-credit-card-order-service:8080"
+    BITCOIN_PAYMENT_SERVICE_URL: "http://{{ .Release.Name }}-bitcoin-payment-service:8080"
     ENGINE_URL: "http://{{ .Release.Name }}-engine:8080"
     FEATURE_FLAG_SERVICE_URL: "http://{{ .Release.Name }}-feature-flag-service:8080"
     FRONTEND_URL: "http://{{ .Release.Name }}-frontend:3000"

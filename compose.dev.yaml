@@ -132,6 +132,7 @@ services:
       - accountservice
       - engine
       - credit-card-order-service
+      - bitcoin-payment-service
       - third-party-service
     ports:
       - 80:80
@@ -197,6 +198,24 @@ services:
       <<: *feature-flag-service-env
       WORK_DELAY: 30
       WORK_RATE: 30
+      JAVA_TOOL_OPTIONS: "-XX:-OmitStackTraceInFastThrow"
+
+  bitcoin-payment-service:
+    <<: *default-service
+    build: src/bitcoin-payment-service
+    depends_on:
+      - db
+      - feature-flag-service
+    ports:
+      - 8095:8080
+    environment:
+      PROXY_PREFIX: bitcoin-payment-service
+      MSSQL_CONNECTIONSTRING: *java-connection-string
+      <<: *feature-flag-service-env
+      DB_POOL_MAX_SIZE: 10
+      DB_POOL_MIN_IDLE: 2
+      SETTLEMENT_DELAY: 5
+      SETTLEMENT_RATE: 10
       JAVA_TOOL_OPTIONS: "-XX:-OmitStackTraceInFastThrow"
 
   third-party-service:

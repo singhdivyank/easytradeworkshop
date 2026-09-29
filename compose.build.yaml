@@ -29,6 +29,11 @@ services:
     build:
       context: src/credit-card-order-service
 
+  bitcoin-payment-service:
+    image: ${REGISTRY}/bitcoin-payment-service:${TAG}
+    build:
+      context: src/bitcoin-payment-service
+
   db:
     image: ${REGISTRY}/db:${TAG}
     build:
